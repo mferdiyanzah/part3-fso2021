@@ -10,50 +10,76 @@ app.use(cors())
 
 // Route to home
 // When all data is fetching
-app.get('/', (req, res) => {
-  Person.find()
-    .then(person => res.json(person))
-    .catch(err => res.status(400).json('Error: ' + err))
+app.get('/', (req, res, next) => {
+    Person.find()
+        .then(person => {
+            res.json(person)
+        })
+        .catch(err => next(err))
 })
-
-/*
-
-app.get('/:id', (req, res) =>{
-  const id = req.params.id
-  const person = persons.find(person => person.id === id)
-  res.json(person)
-})
-
-*/
 
 // Deleting the contact3
 app.delete('/:id', (req, res, next) => {
-  Person.findByIdAndRemove(req.params.id)
-    .then(res => {
-      res.status(204).end()
-    })
-    .catch(err => next(err))
+    Person.findByIdAndDelete(req.params.id)
+        .then(() => {
+            res.status(204).end()
+            console.log(req.params.id+ ' is deleted')
+        })
+        .catch(err => next(err))
 })
 
 
-app.post('/', (req, res) => {
-  console.log(req.body)
-  const personObject = new Person(req.body)
+app.post('/', (req, res, next) => {
+    const personObject = new Person(req.body)
 
-  personObject.save()
-    .then((res) => console.log('A contact is added'))
-    .catch(err => res.status(400).json('Error: ' + err))
+    personObject.save()
+        .then(() => console.log('A contact is added'))
+        .catch(err => next(err))
 })
 
-const date = new Date() 
+app.put('/:id', (req, res, next) => {
+    const body = req.body
 
-app.get('/info', (req, res) => {
-  res.send(`Phonebook has info for ${persons.length} people<br>
-    ${date}
-  `)
+    const person = {
+        name: body.name,
+        number: body.number
+    }
+
+    Person.findByIdAndUpdate(req.params.id, person)
+        .then(() => console.log(person.name+ ' is updated'))
+        .catch(err => next(err))
 })
+
+app.get('/:id', (req, res, next) => {
+    console.log('get: '+req.params.id)
+    Person.find({_id:req.params.id})
+        .then(person => {
+            res.json(person)
+        })
+        .catch(err => next(err))
+})
+
+
+// Error Handlers
+const unknownEndpoint = (req, res) => {
+    res.status(404).send({error: 'unknowrn endpoint'})
+}
+
+app.use(unknownEndpoint)
+
+const errorHandler = (error, req, res, next) => {
+    console.error(error.message)
+
+    if(error.name === 'CastError'){
+        return res.status(400).send({ error: 'malformatted id' })
+    } else if(error.name === 'ValidationError'){
+        return res.status(400).json({error: error.message})
+    }
+    next(error)
+}
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`)
+    console.log(`Server is running on port ${PORT}`)
 })
