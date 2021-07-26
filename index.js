@@ -1,85 +1,48 @@
+// Defining and Importing the required module
 const express = require('express')
 const app = express()
-const morgan = require('morgan')
 const cors = require('cors')
 
-morgan.token('body', (req, res) => JSON.stringify(req.body))
+const Person = require('./models/persons')
 
-app.use(morgan(':method :url :status :response-time ms - :res[content-length] :body'))
 app.use(express.json())
 app.use(cors())
 
-let persons = [
-  { 
-    "id": 1,
-    "name": "Arto Hellas", 
-    "number": "040-123456"
-  },
-  { 
-    "id": 2,
-    "name": "Ada Lovelace", 
-    "number": "39-44-5323523"
-  },
-  { 
-    "id": 3,
-    "name": "Dan Abramov", 
-    "number": "12-43-234345"
-  },
-  { 
-    "id": 4,
-    "name": "Mary Poppendieck", 
-    "number": "39-23-6423122"
-  }
-]
-
+// Route to home
+// When all data is fetching
 app.get('/', (req, res) => {
-  res.send('Hello Worlds')
+  Person.find()
+    .then(person => res.json(person))
+    .catch(err => res.status(400).json('Error: ' + err))
 })
 
-app.get('/api/persons', (req, res) => {
-  res.json(persons)
-})
+/*
 
-app.get('/api/persons/:id', (req, res) =>{
+app.get('/:id', (req, res) =>{
   const id = req.params.id
   const person = persons.find(person => person.id === id)
   res.json(person)
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  persons = persons.filter(person => person.id !== id)
-  res.send(req.params.id+' is deleted')
+*/
+
+// Deleting the contact3
+app.delete('/:id', (req, res, next) => {
+  Person.findByIdAndRemove(req.params.id)
+    .then(res => {
+      res.status(204).end()
+    })
+    .catch(err => next(err))
 })
 
-app.post('/api/persons/', (req, res) => {
-  const id = Math.floor(Math.random() * 1000)
 
-  const personObject = req.body
+app.post('/', (req, res) => {
+  console.log(req.body)
+  const personObject = new Person(req.body)
 
-  let message = ''
-
-  if((personObject.name === undefined) || (personObject.number === undefined)){
-    message = 'The number or name is missing'
-    res.json({
-      error:message
-    })
-  } else{
-    const checkName = persons.find((person) => person.name === personObject.name)
-
-    if(checkName){
-      message = 'The name already exists in the phonebook'
-      res.json({
-        error:message
-      })
-    } else{
-      personObject.id = id
-  
-      persons = persons.concat(personObject)
-    
-      res.json(personObject)
-    }
-  }
+  personObject.save()
+    .then((res) => console.log('A contact is added'))
+    .catch(err => res.status(400).json('Error: ' + err))
 })
 
 const date = new Date() 
